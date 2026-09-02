@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="單字練習">
+<title>1200字不熟單字練習</title>
+<style>
+:root{--bg:#f7f7f5;--card:#fff;--text:#1f2937;--muted:#6b7280;--line:#d1d5db;--accent:#2563eb;--good:#15803d;--bad:#b91c1c}
+*{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+.wrap{max-width:800px;margin:auto;padding:16px} h1{font-size:24px;margin:5px 0} .small{font-size:14px;color:var(--muted);line-height:1.5}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0} button{min-height:46px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:16px;padding:10px 14px;color:var(--text)}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent)} button.active{background:#dbeafe;border-color:#93c5fd}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:12px}
+textarea,input{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:16px;background:#fff} textarea{min-height:280px}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px} .center{text-align:center} .word{font-size:34px;font-weight:700;margin:20px 0 10px} .sentence{font-size:20px;line-height:1.8}
+.hidden{display:none} .status{margin-top:10px;font-size:14px;color:var(--muted)} .good{color:var(--good);font-weight:700} .bad{color:var(--bad);font-weight:700}
+.pill{display:inline-block;padding:4px 8px;border:1px solid var(--line);border-radius:999px;margin:3px;font-size:14px}
+.vocab-list{margin-top:14px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+.vocab-head,.vocab-row{display:grid;grid-template-columns:52px minmax(120px,180px) 1fr;align-items:start}
+.vocab-head{background:#f3f4f6;font-weight:700;font-size:14px;color:#4b5563}
+.vocab-row{border-top:1px solid #e5e7eb}
+.vocab-head>div,.vocab-row>div{padding:11px 12px}
+.vocab-num{color:var(--muted);text-align:center}
+.vocab-word{font-weight:700;font-size:17px;word-break:break-word}
+.vocab-sentence{line-height:1.55;font-size:16px}
+.edit-toggle{margin-top:12px}
+#editorWrap{margin-top:12px}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.choice{min-height:58px;font-size:18px;text-align:left;padding:12px 14px}.choice.correct{border-color:var(--good);background:#dcfce7}.choice.wrong{border-color:var(--bad);background:#fee2e2}.choice:disabled{opacity:1;color:var(--text)}
+@media(max-width:520px){.tabs{grid-template-columns:1fr}.word{font-size:30px}.sentence{font-size:19px}.choices{grid-template-columns:1fr}.vocab-head{display:none}.vocab-row{display:grid;grid-template-columns:38px 1fr}.vocab-row>div{padding:10px}.vocab-sentence{grid-column:2;font-size:15px;padding-top:0!important}.vocab-word{font-size:17px}.vocab-num{grid-row:1 / span 2}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>1200字｜不熟單字練習</h1>
+<div class="small">這是依照片中「△ 或沒有明確 ✓」做的第一輪名單。你可以在「編輯名單」刪掉其實已經會的字；修改後會保存在這台裝置。</div>
+<div class="tabs">
+<button class="tab active" data-tab="edit">編輯名單</button>
+<button class="tab" data-tab="cards">句子閃卡</button>
+<button class="tab" data-tab="quiz">選擇題填空</button>
+</div>
+
+<section id="edit" class="panel">
+<div class="card">
+<div class="small">已按英文字母順序整理。手機上會顯示成「單字在上、例句在下」，比較好閱讀。</div>
+<div id="vocabList" class="vocab-list"></div>
+<button id="toggleEdit" class="edit-toggle">編輯名單</button>
+<div id="editorWrap" class="hidden">
+  <div class="small" style="margin-top:10px">格式：單字 | 英文例句（每行一組）</div>
+  <textarea id="editor"></textarea>
+  <div class="row"><button id="save" class="primary">儲存名單</button><button id="reset">回復原始名單</button></div>
+</div>
+<div id="editMsg" class="status"></div>
+</div>
+</section>
+
+<section id="cards" class="panel hidden">
+<div class="card center">
+<div class="small"><span id="ci">1</span> / <span id="ct">1</span>　<span id="knownText"></span></div>
+<div id="cw" class="word">________</div>
+<div id="cs" class="sentence"></div>
+<button id="reveal" style="margin-top:16px">顯示答案</button>
+<div class="row" style="justify-content:center">
+<button id="prev">上一張</button><button id="hard">還不熟</button><button id="known" class="primary">認得了</button><button id="next">下一張</button>
+</div>
+</div>
+</section>
+
+<section id="quiz" class="panel hidden">
+<div class="card">
+<div class="small">第 <span id="qi">1</span> 題　｜　答對 <span id="score">0</span> 題</div>
+<div class="small" style="margin-top:8px">看句子，選出最適合填入空格的單字。</div>
+<div id="qs" class="sentence" style="margin-top:18px"></div>
+<div id="choices" class="choices"></div>
+<div class="row"><button type="button" id="show">看答案</button><button type="button" id="qnext" class="primary">下一題</button></div>
+<div id="qmsg" class="status"></div>
+</div>
+</section>
+</div>
+<script>
+(()=>{
+const BASE=[["a few", "I have a few questions for the teacher."], ["able", "She is able to finish the work by herself."], ["above", "The clock is above the door."], ["abroad", "My uncle works abroad."], ["ahead", "Walk straight ahead for two blocks."], ["air", "Open the window and let some fresh air in."], ["appear", "A rainbow may appear after the rain."], ["arrive", "We arrived at school before eight."], ["autumn", "The leaves change color in autumn."], ["badminton", "We play badminton after school."], ["bag", "Put your books in your bag."], ["balcony", "There are flowers on the balcony."], ["band", "My brother plays guitar in a school band."], ["begin", "The movie will begin at seven."], ["belong", "This pencil belongs to Amy."], ["below", "Read the sentence below the picture."], ["belt", "He wears a black belt with his jeans."], ["blackboard", "The teacher writes the answer on the blackboard."], ["blind", "The blind man uses a cane to walk."], ["block", "The library is one block from here."], ["blow", "The wind can blow the leaves away."], ["bookstore", "I bought this book at the bookstore."], ["born", "My sister was born in May."], ["bottom", "Your shoes are at the bottom of the stairs."], ["bow", "The actor gave a bow after the show."], ["bowl", "She put the soup in a bowl."], ["break", "Be careful not to break the glass."], ["bridge", "We walked across the bridge."], ["bright", "The sun is very bright today."], ["build", "They want to build a new playground."], ["bun", "I ate a warm bun for breakfast."], ["burn", "Do not touch the pan, or you may burn your hand."], ["bus", "We take the bus to school."], ["business", "Her father owns a small business."], ["businessman", "The businessman is talking on the phone."], ["butterfly", "A butterfly landed on the flower."], ["cage", "The bird flew out of its cage."], ["cake", "We made a cake for Mom's birthday."], ["camera", "She took a picture with her camera."], ["can", "I can swim across the pool."], ["candle", "We lit a candle on the birthday cake."], ["carry", "Can you help me carry this box?"], ["case", "Keep your glasses in their case."], ["catch", "Try to catch the ball with both hands."], ["celebrate", "We celebrate the New Year with our family."], ["cell phone", "Please turn off your cell phone in class."], ["cent", "One dollar is equal to one hundred cents."], ["center", "Meet me at the center of the park."], ["centimeter", "The pencil is about fifteen centimeters long."], ["chalk", "The teacher picked up a piece of chalk."], ["cheat", "You should never cheat on a test."], ["cheer", "We cheered loudly for our team."], ["chopsticks", "I can eat noodles with chopsticks."], ["church", "They go to church on Sunday morning."], ["clear", "The sky is clear today."], ["clerk", "The store clerk helped me find my size."], ["club", "She joined the English club at school."], ["collect", "He likes to collect old coins."], ["comfortable", "These shoes are very comfortable."], ["comic", "He reads a comic after dinner."], ["common", "This is a common mistake for beginners."], ["convenient", "The MRT is fast and convenient."], ["copy", "Please copy the sentence into your notebook."], ["corner", "There is a bakery on the corner."], ["correct", "Your first answer was correct."], ["cost", "How much does this T-shirt cost?"], ["couch", "Dad is sitting on the couch."], ["count", "Can you count from one to one hundred?"], ["course", "She is taking an online English course."], ["dangerous", "It is dangerous to play in the street."], ["dark", "It gets dark early in winter."], ["dear", "Dear Grandma, thank you for your gift."], ["decide", "We need to decide where to eat."], ["department store", "We bought shoes at the department store."], ["dictionary", "Look up the new word in a dictionary."], ["different", "My answer is different from yours."], ["difficult", "This question is difficult, but I will try."], ["dig", "The dog likes to dig holes in the yard."], ["dining room", "We eat dinner in the dining room."], ["dodge ball", "The children are playing dodge ball at school."], ["dozen", "Mom bought a dozen eggs."], ["drawer", "My socks are in the top drawer."], ["drop", "Be careful not to drop your phone."], ["during", "We stayed inside during the heavy rain."], ["each", "Each student has a different book."], ["early", "I woke up early this morning."], ["east", "The sun rises in the east."], ["either", "You can choose either the red one or the blue one."], ["elementary school", "My brother goes to an elementary school near our home."], ["else", "Would you like anything else?"], ["engineer", "My uncle is an engineer."], ["enter", "Please knock before you enter the room."], ["envelope", "Put the letter inside the envelope."], ["eve", "We had dinner together on New Year's Eve."], ["even", "Even my little brother can do this puzzle."], ["evening", "We take a walk in the evening."], ["example", "This sentence is an example of the new word."], ["excellent", "You did an excellent job on the test."], ["except", "Everyone came to class except Ben."], ["experience", "Traveling was a wonderful experience for us."], ["fact", "It is a fact that water freezes at zero degrees Celsius."], ["factory", "Many cars are made in this factory."], ["fail", "Do not worry if you fail once; try again."], ["far", "My school is not far from my home."], ["farm", "My grandparents grow vegetables on a farm."], ["feed", "Please feed the dog before you leave."], ["festival", "We watched fireworks at the festival."], ["few", "Only a few students were absent today."], ["fifth", "Our classroom is on the fifth floor."], ["fill", "Please fill the bottle with water."], ["foreign", "She enjoys learning about foreign countries."], ["foreigner", "The foreigner asked me for directions."], ["free", "Are you free this afternoon?"], ["French fries", "He ordered a hamburger and French fries."], ["fresh", "We bought fresh fruit at the market."], ["frisbee", "The children threw a frisbee in the park."], ["front", "Please wait in front of the station."], ["fry", "Dad will fry an egg for breakfast."], ["full", "The bus is full, so we have to wait."], ["garbage", "Please put the garbage in the trash can."], ["gas", "The car is low on gas."], ["gate", "Wait for me at the school gate."], ["ghost", "The children told a funny ghost story."], ["giant", "The story is about a giant who lives in a castle."], ["glad", "I am glad to see you again."], ["glove", "Wear gloves when your hands are cold."], ["goose", "A goose is swimming in the pond."], ["grade", "She is in the sixth grade."], ["gram", "This bag of sugar weighs five hundred grams."], ["group", "Work in a group of four students."], ["grow", "These plants grow quickly in summer."], ["guava", "We bought a ripe guava at the market."], ["guy", "That guy is my cousin."], ["gym", "We play basketball in the school gym."], ["habit", "Reading every day is a good habit."], ["Halloween", "Children often wear costumes on Halloween."], ["hang", "Please hang your coat on the hook."], ["hard-working", "She is a hard-working student."], ["hate", "I hate getting up late for school."], ["headache", "I have a headache, so I want to rest."], ["heat", "The heat made everyone feel tired."], ["hen", "The hen laid an egg this morning."], ["hobby", "Reading is one of my favorite hobbies."], ["hold", "Please hold my hand when we cross the street."], ["holiday", "We visited our grandparents during the holiday."], ["honey", "I like a little honey in my tea."], ["hop", "The rabbit can hop very fast."], ["hotel", "We stayed at a small hotel near the station."], ["however", "It was raining; however, we still went out."], ["hunt", "The cat likes to hunt small insects."], ["important", "It is important to get enough sleep."], ["interest", "Science interests me because I like experiments."], ["interview", "The reporter will interview the famous player."], ["Internet", "I use the Internet to look for information."], ["into", "She walked into the classroom quietly."], ["island", "Taiwan is an island."], ["jog", "My dad likes to jog in the park."], ["junior high school", "My cousin will start junior high school next year."], ["kill", "Smoking can kill people."], ["kilo", "This bag of rice weighs one kilo."], ["knife", "Be careful when you use a sharp knife."], ["knowledge", "Reading gives us knowledge about the world."], ["koala", "A koala sleeps for many hours a day."], ["lantern", "We saw colorful lanterns at the festival."], ["large", "They live in a large house."], ["last", "This is the last question on the page."], ["late", "Do not be late for class."], ["lawyer", "The lawyer works in an office downtown."], ["lazy", "Do not be lazy; finish your homework first."], ["lead", "She will lead the team in the school project."], ["leader", "Our team chose Mia as its leader."], ["least", "This one costs the least."], ["lend", "Can you lend me your ruler?"], ["less", "I drink less soda now."], ["lesson", "Today's English lesson was interesting."], ["letter", "I wrote a letter to my friend."], ["lettuce", "We put lettuce in the sandwich."], ["lid", "Put the lid back on the bottle."], ["lip", "She bit her lip because she was nervous."], ["list", "I made a list of things to buy."], ["lonely", "He felt lonely when his best friend moved away."], ["lovely", "What a lovely day!"], ["low", "The plane is flying low over the city."], ["machine", "This machine can wash and dry clothes."], ["mad", "Mom was mad because I forgot my homework."], ["mailman", "The mailman brings letters to our house."], ["mark", "Put a mark next to the correct answer."], ["marker", "Please write your name with a black marker."], ["mask", "Wear a mask if you are sick."], ["mat", "Wipe your shoes on the mat."], ["matter", "What is the matter with your bike?"], ["may", "It may rain this afternoon."], ["meal", "Breakfast is an important meal."], ["medicine", "Take this medicine after dinner."], ["meet", "Let's meet at the library after school."], ["meeting", "Dad has a meeting this afternoon."], ["mile", "The park is about one mile from here."], ["million", "The city has more than one million people."], ["mind", "Do you mind opening the window?"], ["Miss", "Miss Lin is our English teacher."], ["miss", "I miss my grandparents very much."], ["mistake", "I made a mistake in the last question."], ["modern", "This is a modern building."], ["moment", "Please wait a moment."], ["mop", "Please mop the wet floor."], ["most", "Most students in my class like music."], ["move", "Please move your chair closer to the table."], ["mud", "My shoes are covered with mud."], ["must", "You must wear a helmet when riding a bike."], ["nail", "Dad hit the nail with a hammer."], ["national", "Today is a national holiday."], ["nod", "She nodded her head and said yes."], ["noise", "The loud noise woke the baby."], ["noodle", "I had a bowl of noodles for lunch."], ["noon", "We usually eat lunch at noon."], ["notice", "Did you notice the new sign?"], ["officer", "The police officer helped the lost child."], ["often", "I often read before bed."], ["oil", "We need a little oil to fry the egg."], ["order", "I would like to order a bowl of soup."], ["ox", "An ox is a strong farm animal."], ["package", "A package arrived for Dad this morning."], ["page", "Turn to page twenty, please."], ["paint", "We will paint the wall this weekend."], ["pair", "I bought a new pair of shoes."], ["part", "This is my favorite part of the story."], ["past", "We walked past the bank and turned left."], ["paste", "Cut out the picture and paste it here."], ["pear", "I ate a sweet pear after lunch."], ["perhaps", "Perhaps we can go to the zoo tomorrow."], ["pick", "Please pick up the paper from the floor."], ["piece", "Would you like a piece of cake?"], ["pin", "She used a pin to hold the paper in place."], ["pipe", "Water is leaking from the pipe."], ["place", "This park is a good place for a picnic."], ["planet", "Earth is the planet we live on."], ["player", "He is the best player on our team."], ["pleasure", "It was a pleasure to meet you."], ["pond", "There are many fish in the pond."], ["pool", "The children are swimming in the pool."], ["popular", "This song is very popular with teenagers."], ["postcard", "She sent me a postcard from Japan."], ["pot", "The soup is cooking in a large pot."], ["pound", "The baby weighed seven pounds at birth."], ["pray", "They prayed for good weather."], ["prepare", "We need to prepare for tomorrow's test."], ["present", "She gave me a birthday present."], ["pretty", "That is a pretty dress."], ["prize", "He won first prize in the contest."], ["program", "We watched a science program on TV."], ["proud", "Her parents are proud of her."], ["public", "Smoking is not allowed in many public places."], ["pull", "Pull the door to open it."], ["quarter", "A quarter of the pizza is left."], ["quite", "The test was quite easy."], ["race", "He won the school running race."], ["radio", "Grandpa listens to the radio every morning."], ["railroad", "The road crosses the railroad near the station."], ["recorder", "She can play a song on the recorder."], ["refrigerator", "Put the milk back in the refrigerator."], ["repeat", "Please repeat the sentence slowly."], ["reporter", "The reporter asked the player some questions."], ["rich", "The rich man gave money to the school."], ["roll", "Roll the ball to your partner."], ["roller-skate/blade", "She learned to roller-blade in the park."], ["round", "The table is round."], ["rule", "We must follow the school rules."], ["salesman", "The salesman showed us a new computer."], ["salt", "Do not put too much salt in the soup."], ["same", "We are wearing the same color today."], ["sacred", "The temple is a sacred place for many people."], ["save", "I am saving money for a new bicycle."], ["screen", "Do not sit too close to the screen."], ["seat", "Is this seat taken?"], ["secretary", "The secretary answered the phone."], ["seldom", "I seldom drink soda."], ["sell", "They sell fresh bread at this bakery."], ["send", "Please send me the photo later."], ["senior high school", "My sister is a student at a senior high school."], ["sentence", "Write one sentence with the new word."], ["serious", "This is a serious problem."], ["set", "Please set the cups on the table."], ["several", "We waited for several minutes."], ["shall", "Shall we go for a walk?"], ["shape", "The moon changes shape during the month."], ["shop", "I stopped at a shop to buy water."], ["shoulder", "My school bag hurts my shoulder."], ["shout", "Do not shout in the library."], ["side", "Please stand on this side of the road."], ["sidewalk", "Walk on the sidewalk, not in the street."], ["sight", "The mountain was a beautiful sight."], ["sign", "Read the sign before you enter."], ["simple", "This is a simple question."], ["since", "I have lived here since 2020."], ["size", "What size shoes do you wear?"], ["skate", "We went to skate at the ice rink."], ["slide", "The children went down the slide."], ["slim", "She is tall and slim."], ["smoke", "Smoke filled the room."], ["sore", "My throat is sore today."], ["south", "Kaohsiung is in southern Taiwan."], ["space", "There is not enough space in my bag."], ["spell", "Can you spell your name in English?"], ["stamp", "Put a stamp on the envelope."], ["steak", "Dad ordered a steak for dinner."], ["stomach", "My stomach hurts after eating too much."], ["straight", "Go straight and turn right at the corner."], ["strange", "I heard a strange noise outside."], ["successful", "She worked hard and became successful."], ["supermarket", "We buy fruit and milk at the supermarket."], ["surf", "They learned to surf at the beach."], ["tape", "Use some tape to fix the torn paper."], ["teenager", "A teenager is a person between childhood and adulthood."], ["television", "We watched the game on television."], ["temple", "We visited an old temple during the trip."], ["tennis", "She plays tennis every Saturday."], ["than", "My brother is taller than I am."], ["theater", "We saw a movie at the theater."], ["thick", "This book is very thick."], ["thin", "The ice is too thin to walk on."], ["though", "Though it was late, he finished his homework."], ["tidy", "Please keep your room tidy."], ["tie", "Dad wears a tie to work."], ["top", "The book is on the top shelf."], ["total", "The total cost is five hundred dollars."], ["towel", "Dry your hands with a towel."], ["trash", "Please throw the trash away."], ["treat", "My aunt treated us to ice cream."], ["trick", "The magician showed us a clever trick."], ["truck", "A large truck stopped in front of the store."], ["tub", "The baby is sitting in the tub."], ["turkey", "They ate turkey for dinner."], ["twice", "I brush my teeth twice a day."], ["uncle", "My uncle lives in Taipei."], ["uniform", "We wear a school uniform on weekdays."], ["until", "I studied until ten o'clock last night."], ["visit", "We will visit Grandma this weekend."], ["voice", "She has a beautiful singing voice."], ["waiter", "The waiter brought us some water."], ["waitress", "The waitress took our order."], ["wall", "There is a picture on the wall."], ["wallet", "Dad keeps his money in his wallet."], ["wave", "She waved goodbye from the train."], ["west", "The sun sets in the west."], ["wet", "My shoes got wet in the rain."], ["whether", "I don't know whether he will come."], ["wise", "The old man gave us wise advice."], ["wish", "I wish you a happy birthday."], ["without", "He left home without his umbrella."], ["writer", "She wants to become a writer."], ["yard", "The children are playing in the yard."], ["yet", "I haven't finished my homework yet."]];
+let words=[],card=0,quiz=0,score=0,known=new Set(),answered=false;
+const $=id=>document.getElementById(id);
+const tabs=[...document.querySelectorAll('.tab')], panels=[...document.querySelectorAll('.panel')];
+
+function serial(a){return a.map(x=>x[0]+' | '+x[1]).join('\n')}
+function sortWords(a){return [...a].sort((x,y)=>x[0].localeCompare(y[0],'en',{sensitivity:'base'}))}
+function renderVocabList(){
+  const box=$('vocabList'); if(!box)return;
+  const sorted=sortWords(words);
+  box.innerHTML='<div class="vocab-head"><div>#</div><div>單字</div><div>英文例句</div></div>'+sorted.map((x,i)=>
+    '<div class="vocab-row"><div class="vocab-num">'+(i+1)+'</div><div class="vocab-word">'+escapeHtml(x[0])+'</div><div class="vocab-sentence">'+escapeHtml(x[1])+'</div></div>'
+  ).join('');
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function parse(t){return t.split(/\n+/).map(x=>x.trim()).filter(Boolean).slice(0,500).map(line=>{const p=line.split('|');return[(p.shift()||'').trim(),p.join('|').trim()]}).filter(x=>x[0]&&x[1])}
+function blank(item){const esc=item[0].replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return item[1].replace(new RegExp('\\b'+esc+'\\b','ig'),'________')}
+function showTab(n){tabs.forEach(b=>b.classList.toggle('active',b.dataset.tab===n));panels.forEach(p=>p.classList.toggle('hidden',p.id!==n))}
+function load(){
+  try{const s=JSON.parse(localStorage.getItem('vocab1200'));words=sortWords(Array.isArray(s)&&s.length?s:BASE)}catch(e){words=sortWords(BASE)}
+  $('editor').value=serial(words);renderVocabList();renderCard();renderQuiz();$('editMsg').textContent='目前 '+words.length+' 個需要複習的字。'
+}
+function save(){
+  const p=parse($('editor').value); if(!p.length){$('editMsg').textContent='名單不能是空的。';return}
+  words=sortWords(p);localStorage.setItem('vocab1200',JSON.stringify(words));$('editor').value=serial(words);card=quiz=score=0;known=new Set();$('score').textContent='0';renderVocabList();renderCard();renderQuiz();$('editMsg').textContent='已儲存 '+words.length+' 個字。'
+}
+function renderCard(){
+ if(!words.length)return;const it=words[card];$('ci').textContent=card+1;$('ct').textContent=words.length;$('cw').textContent='________';$('cs').textContent=blank(it);$('knownText').textContent='已認得 '+known.size+' 個'
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function makeChoices(){
+  const target=words[quiz][0];
+  const pool=[...new Set(words.map(x=>x[0]).filter(w=>w.toLowerCase()!==target.toLowerCase()))];
+  shuffle(pool);
+  return shuffle([target,...pool.slice(0,3)]);
+}
+function renderQuiz(){
+  if(!words.length)return;
+  answered=false;
+  const it=words[quiz];
+  $('qi').textContent=quiz+1;
+  $('qs').textContent=blank(it);
+  $('qmsg').textContent='';$('qmsg').className='status';
+  const box=$('choices');box.innerHTML='';
+  makeChoices().forEach(w=>{
+    const b=document.createElement('button');b.type='button';b.className='choice';b.textContent=w;
+    b.addEventListener('click',()=>checkChoice(b,w));box.appendChild(b);
+  });
+}
+function checkChoice(btn,chosen){
+  if(answered)return;answered=true;
+  const target=words[quiz][0];
+  [...$('choices').children].forEach(b=>{b.disabled=true;if(b.textContent.toLowerCase()===target.toLowerCase())b.classList.add('correct')});
+  if(chosen.toLowerCase()===target.toLowerCase()){score++;$('score').textContent=score;$('qmsg').textContent='✓ 答對了！';$('qmsg').className='status good'}
+  else{btn.classList.add('wrong');$('qmsg').textContent='答案是：'+target;$('qmsg').className='status bad'}
+}
+tabs.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+$('save').addEventListener('click',save);
+$('reset').addEventListener('click',()=>{words=sortWords(BASE);localStorage.removeItem('vocab1200');$('editor').value=serial(words);card=quiz=score=0;known=new Set();renderVocabList();renderCard();renderQuiz();$('editMsg').textContent='已回復原始名單。'});
+$('toggleEdit').addEventListener('click',()=>{const w=$('editorWrap');const isHidden=w.classList.toggle('hidden');$('toggleEdit').textContent=isHidden?'編輯名單':'收起編輯';});
+$('reveal').addEventListener('click',()=>{const it=words[card];$('cw').textContent=it[0];$('cs').textContent=it[1]});
+$('prev').addEventListener('click',()=>{card=(card-1+words.length)%words.length;renderCard()});
+$('next').addEventListener('click',()=>{card=(card+1)%words.length;renderCard()});
+$('known').addEventListener('click',()=>{known.add(card);card=(card+1)%words.length;renderCard()});
+$('hard').addEventListener('click',()=>{known.delete(card);card=(card+1)%words.length;renderCard()});
+$('show').addEventListener('click',()=>{const target=words[quiz][0];answered=true;[...$('choices').children].forEach(b=>{b.disabled=true;if(b.textContent.toLowerCase()===target.toLowerCase())b.classList.add('correct')});$('qmsg').textContent='答案：'+target;$('qmsg').className='status'});
+$('qnext').addEventListener('click',()=>{quiz=(quiz+1)%words.length;renderQuiz()});
+load();
+})();
+</script>
+</body>
+</html>
