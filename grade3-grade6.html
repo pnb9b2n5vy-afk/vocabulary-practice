@@ -18,6 +18,7 @@
 .choices{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px} .choice{min-height:60px;font-size:18px;text-align:left;padding:12px 14px} .choice.correct{border-color:var(--good);background:#dcfce7} .choice.wrong{border-color:var(--bad);background:#fee2e2} .choice:disabled{opacity:1;color:var(--text)}
 .vocab-list{margin-top:14px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff} .vocab-row{display:grid;grid-template-columns:54px minmax(130px,190px) 1fr;border-top:1px solid #e5e7eb;align-items:start} .vocab-row:first-child{border-top:0} .vocab-row>div{padding:10px 12px} .vocab-num{color:var(--muted);text-align:center} .vocab-word{font-weight:700;font-size:17px} .vocab-extra{line-height:1.55;font-size:16px}
 .badge{display:inline-block;background:var(--soft);border-radius:999px;padding:5px 9px;font-size:13px;margin-left:6px}
+.word-tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}.mini-tool{min-height:34px;padding:5px 9px;font-size:14px;border-radius:9px}.card-tools{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:10px}
 @media(max-width:560px){.home-grid{grid-template-columns:1fr} .tabs{grid-template-columns:1fr 1fr 1fr} .word{font-size:34px} .sentence{font-size:19px} .choices{grid-template-columns:1fr} .vocab-row{grid-template-columns:38px 1fr} .vocab-extra{grid-column:2;padding-top:0!important;font-size:15px} .vocab-num{grid-row:1 / span 2} .home-card{min-height:130px}}
 </style>
 </head>
@@ -35,7 +36,7 @@
   <div class="topbar"><div><h2 id="modeTitle"></h2><div id="modeDesc" class="small"></div></div><button onclick="goHome()">← 換另一個孩子</button></div>
   <div class="tabs"><button class="tab active" data-tab="list">單字表</button><button class="tab" data-tab="cards">閃卡</button><button class="tab" data-tab="quiz">選擇題</button></div>
   <section id="list" class="panel"><div class="card"><div id="listHint" class="small"></div><div id="vocabList" class="vocab-list"></div></div></section>
-  <section id="cards" class="panel hidden"><div class="card center"><div class="small"><span id="ci">1</span> / <span id="ct">1</span>　<span id="knownText"></span></div><div id="cw" class="word"></div><div id="cs" class="sentence"></div><div id="cm" class="meaning hidden"></div><button id="reveal" style="margin-top:16px">顯示答案</button><div class="row" style="justify-content:center"><button id="prev">上一張</button><button id="hard">還不熟</button><button id="known" class="primary">認得了</button><button id="next">下一張</button></div></div></section>
+  <section id="cards" class="panel hidden"><div class="card center"><div class="small"><span id="ci">1</span> / <span id="ct">1</span>　<span id="knownText"></span></div><div id="cw" class="word"></div><div id="cs" class="sentence"></div><div id="cm" class="meaning hidden"></div><div id="cardTools" class="card-tools hidden"><button class="mini-tool" onclick="speakCurrentCard()">🔊 發音</button><button class="mini-tool" onclick="lookupCurrentCard()">🔎 查翻譯</button></div><button id="reveal" style="margin-top:16px">顯示答案</button><div class="row" style="justify-content:center"><button id="prev">上一張</button><button id="hard">還不熟</button><button id="known" class="primary">認得了</button><button id="next">下一張</button></div></div></section>
   <section id="quiz" class="panel hidden"><div class="card"><div class="small">第 <span id="qi">1</span> 題　｜　答對 <span id="score">0</span> 題</div><div id="quizHint" class="small" style="margin-top:8px"></div><div id="qs" class="sentence" style="margin-top:18px"></div><div id="choices" class="choices"></div><div class="row"><button id="show">看答案</button><button id="qnext" class="primary">下一題</button></div><div id="qmsg" class="status"></div></div></section>
 </section>
 </div>
@@ -45,18 +46,33 @@ const G6=[["a few", "I have a few questions for the teacher."], ["able", "She is
 let mode=null, words=[], card=0, quiz=0, score=0, answered=false, known=new Set();
 const $=id=>document.getElementById(id);
 const tabs=[...document.querySelectorAll('.tab')], panels=[...document.querySelectorAll('.panel')];
+
+function speakWord(word){
+  if(!('speechSynthesis' in window)){alert('這台裝置目前無法使用網頁發音。');return}
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(word);u.lang='en-US';u.rate=0.82;window.speechSynthesis.speak(u)
+}
+function lookupWord(word){
+  const url='https://translate.google.com/?sl=en&tl=zh-TW&text='+encodeURIComponent(word)+'&op=translate';
+  window.open(url,'_blank','noopener')
+}
+function speakEncoded(v){speakWord(decodeURIComponent(v))}
+function lookupEncoded(v){lookupWord(decodeURIComponent(v))}
+function speakCurrentCard(){if(words.length)speakWord(words[card][0])}
+function lookupCurrentCard(){if(words.length)lookupWord(words[card][0])}
+
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function showTab(n){tabs.forEach(b=>b.classList.toggle('active',b.dataset.tab===n));panels.forEach(p=>p.classList.toggle('hidden',p.id!==n))}
 function blankG6(item){const esc=item[0].replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return item[1].replace(new RegExp('\\b'+esc+'\\b','ig'),'________')}
 function enterMode(m){mode=m; words=m==='g3'?G3:G6; card=quiz=score=0; known=new Set(); $('score').textContent='0'; $('home').classList.add('hidden'); $('app').classList.remove('hidden'); if(m==='g3'){$('modeTitle').textContent='🌱 小三｜基礎單字';$('modeDesc').textContent='練姊姊已經打勾、比較熟的字。';$('listHint').textContent='看英文單字和中文意思。';$('quizHint').textContent='看英文單字，選出正確的中文意思。'}else{$('modeTitle').textContent='📘 小六｜不熟單字';$('modeDesc').textContent='練目前比較不熟的字。';$('listHint').textContent='看單字和例句，例句已依英文字母順序整理。';$('quizHint').textContent='看句子，選出最適合填入空格的單字。'} renderList(); renderCard(); renderQuiz(); showTab('list');}
 function goHome(){$('app').classList.add('hidden');$('home').classList.remove('hidden')}
-function renderList(){let h=''; words.forEach((it,i)=>{h+=`<div class="vocab-row"><div class="vocab-num">${i+1}</div><div class="vocab-word">${it[0]}</div><div class="vocab-extra">${it[1]}</div></div>`});$('vocabList').innerHTML=h}
-function renderCard(){if(!words.length)return;const it=words[card];$('ci').textContent=card+1;$('ct').textContent=words.length;$('knownText').textContent='已認得 '+known.size+' 個';$('cm').classList.add('hidden');if(mode==='g3'){$('cw').textContent=it[0];$('cs').textContent='';$('cm').textContent=it[1]}else{$('cw').textContent='________';$('cs').textContent=blankG6(it);$('cm').textContent=''}}
+function renderList(){let h=''; words.forEach((it,i)=>{const ew=encodeURIComponent(it[0]);h+=`<div class="vocab-row"><div class="vocab-num">${i+1}</div><div class="vocab-word">${it[0]}<div class="word-tools"><button class="mini-tool" data-word="${ew}" onclick="speakEncoded(this.dataset.word)">🔊 發音</button><button class="mini-tool" data-word="${ew}" onclick="lookupEncoded(this.dataset.word)">🔎 查翻譯</button></div></div><div class="vocab-extra">${it[1]}</div></div>`});$('vocabList').innerHTML=h}
+function renderCard(){if(!words.length)return;const it=words[card];$('ci').textContent=card+1;$('ct').textContent=words.length;$('knownText').textContent='已認得 '+known.size+' 個';$('cm').classList.add('hidden');if(mode==='g3'){$('cw').textContent=it[0];$('cs').textContent='';$('cm').textContent=it[1];$('cardTools').classList.remove('hidden')}else{$('cw').textContent='________';$('cs').textContent=blankG6(it);$('cm').textContent='';$('cardTools').classList.add('hidden')}}
 function makeChoices(){const target=words[quiz][mode==='g3'?1:0];const idx=mode==='g3'?1:0;const pool=[...new Set(words.map(x=>x[idx]).filter(w=>w!==target))];shuffle(pool);return shuffle([target,...pool.slice(0,3)])}
 function renderQuiz(){if(!words.length)return;answered=false;const it=words[quiz];$('qi').textContent=quiz+1;$('qmsg').textContent='';$('qmsg').className='status';$('qs').textContent=mode==='g3'?it[0]:blankG6(it);const box=$('choices');box.innerHTML='';makeChoices().forEach(v=>{const b=document.createElement('button');b.type='button';b.className='choice';b.textContent=v;b.onclick=()=>checkChoice(b,v);box.appendChild(b)})}
 function checkChoice(btn,chosen){if(answered)return;answered=true;const target=words[quiz][mode==='g3'?1:0];[...$('choices').children].forEach(b=>{b.disabled=true;if(b.textContent===target)b.classList.add('correct')});if(chosen===target){score++;$('score').textContent=score;$('qmsg').textContent='✓ 答對了！';$('qmsg').className='status good'}else{btn.classList.add('wrong');$('qmsg').textContent='答案是：'+target;$('qmsg').className='status bad'}}
 tabs.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
-$('reveal').onclick=()=>{const it=words[card];if(mode==='g3'){$('cm').classList.remove('hidden')}else{$('cw').textContent=it[0];$('cs').textContent=it[1]}};
+$('reveal').onclick=()=>{const it=words[card];if(mode==='g3'){$('cm').classList.remove('hidden')}else{$('cw').textContent=it[0];$('cs').textContent=it[1];$('cardTools').classList.remove('hidden')}};
 $('prev').onclick=()=>{card=(card-1+words.length)%words.length;renderCard()};
 $('next').onclick=()=>{card=(card+1)%words.length;renderCard()};
 $('known').onclick=()=>{known.add(card);card=(card+1)%words.length;renderCard()};
